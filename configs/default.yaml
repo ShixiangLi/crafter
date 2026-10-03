@@ -1,0 +1,11 @@
+model: qwen3:8b
+ollama_url: http://127.0.0.1:11434
+balrog_path: BALROG
+output_dir: outputs/results
+num_episodes: 10
+num_workers: 1
+max_steps: 2000
+history_length: 16
+replan_interval: 10
+temperature: 1.0
+num_predict: 8192

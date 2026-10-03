@@ -1,0 +1,43 @@
+# Local virtual environments
+.venv/
+venv/
+
+# Python caches and build artifacts
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+/build/
+/dist/
+.coverage
+.coverage.*
+/htmlcov/
+
+# Independent upstream checkout
+/BALROG/
+
+# Generated experiment outputs and logs
+/outputs/
+/analysis/exports/
+*.log
+
+# Notebook checkpoints (keep notebooks themselves)
+.ipynb_checkpoints/
+
+# Local credentials (keep example templates)
+.env
+.env.*
+!.env.example
+!.env.sample
+SECRETS
+
+# Editor and operating-system files
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db

@@ -1,0 +1,4 @@
+Choose one primitive Crafter action to advance the first unfinished goal in the current plan.
+Use observed outcomes to identify completed goals; prioritize immediate survival when needed.
+If no valid plan exists, choose a useful survival or exploration action.
+Return JSON containing a brief "rationale" and one allowed "action". Do not output extra text.

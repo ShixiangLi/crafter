@@ -1,0 +1,5 @@
+Review the observed situation and the outcomes of previous executed actions.
+Give a brief rationale explaining the next useful action, then select exactly one allowed action.
+Return JSON with "rationale" and "action", for example:
+{"rationale":"The tree is directly ahead, so collect wood.","action":"Do"}
+Use only observed information. Do not output extra text outside the JSON object.

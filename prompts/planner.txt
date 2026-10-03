@@ -1,0 +1,5 @@
+Review the current situation and previous plan. Create or update a short ordered plan
+to survive and unlock Crafter achievements. Remove completed goals when updating.
+Use only observed information. Return a JSON object with a "plan" array of 1 to 5 strings.
+Example: {"plan":["Collect wood","Place a table","Make a wood pickaxe"]}
+Do not output text outside JSON.
