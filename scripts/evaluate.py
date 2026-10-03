@@ -17,7 +17,7 @@ sys.path.insert(0, str(ROOT))
 def load_config(argv=None):
     parser = argparse.ArgumentParser(description="Evaluate Crafter agents with BALROG")
     parser.add_argument("--config", type=Path, default=ROOT / "experiments/balrog_baseline.yaml")
-    parser.add_argument("--agent", choices=["naive", "react", "planner", "ours"])
+    parser.add_argument("--agent", choices=["naive", "react", "planner", "ours", "spring"])
     parser.add_argument("--model")
     parser.add_argument("--max-steps", type=int)
     parser.add_argument("--episodes", type=int)

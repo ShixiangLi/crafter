@@ -1,0 +1,25 @@
+{
+  "spring": {
+    "repository": "https://github.com/Holmeswww/SPRING",
+    "commit": "c0369b9127ab9ec63797797a3952be9e119334e1",
+    "file": "GPT_Actor_Chat.ipynb",
+    "license": "MIT",
+    "copyright": "Copyright (c) 2023 Yue Wu"
+  },
+  "manual": {
+    "repository": "https://github.com/microsoft/SmartPlay",
+    "commit": "9dec5f2247da0dc88a47fe3daf3fb4fa02629b89",
+    "file": "src/smartplay/crafter/assets/crafter_ctxt.pkl",
+    "license": "CC-BY-4.0",
+    "asset_sha256": "bddd4bd71bdaee97e289e8e17be7fb5afa2e3d4eef8b92ecaeb83ebe6266d8d1"
+  },
+  "files": {
+    "questions.json": "15b5723ead64af362b084f16b244418bc56474bc2e66b02796822ba774f2f6ae",
+    "manual.txt": "2ece2c1256a11a3e80bd1a2804c066652b0ed478a99d65eedecec4fdbbcb9dde"
+  },
+  "transformations": [
+    "Serialized original question_dependencies to JSON, adding explicit empty dependency lists for the two root questions.",
+    "Extracted a single static Unicode string from pickle opcodes without executing pickle.",
+    "Applied exactly the five manual string replacements in SmartPlay Crafter.__init__."
+  ]
+}

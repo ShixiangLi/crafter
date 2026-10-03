@@ -127,11 +127,11 @@ class LauncherTests(unittest.TestCase):
         for path in (ROOT / "experiments").glob("*.yaml"):
             with self.subTest(path=path):
                 cfg = load_config(["--config", str(path)])[2]
-                self.assertIn(cfg.agent.type, ["naive", "react", "planner", "ours"])
+                self.assertIn(cfg.agent.type, ["naive", "react", "planner", "ours", "spring"])
                 self.assertEqual(cfg.client.generate_kwargs.max_tokens, 8192)
 
     def test_real_environment_evaluation_for_all_agents(self):
-        for agent in ("naive", "react", "planner", "ours"):
+        for agent in ("naive", "react", "planner", "ours", "spring"):
             with self.subTest(agent=agent), tempfile.TemporaryDirectory() as tmp:
                 client = FakeClient()
                 with patch("agents.factory.create_llm_client", return_value=lambda: client), \
@@ -144,7 +144,7 @@ class LauncherTests(unittest.TestCase):
                 episode = json.loads((run / "crafter/default/default_run_00.json").read_text())
                 self.assertEqual(episode["num_steps"], 3)
                 self.assertEqual(episode["failed_candidates"], [])
-                self.assertEqual(episode["input_tokens"], 28 if agent in ("planner", "ours") else 21)
+                self.assertEqual(episode["input_tokens"], 189 if agent == "spring" else (28 if agent in ("planner", "ours") else 21))
                 self.assertEqual(episode["agent"]["type"], agent)
                 self.assertEqual(episode["seed"], 0)
                 status = json.loads((run / "status.json").read_text())

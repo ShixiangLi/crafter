@@ -1,5 +1,39 @@
-Review the observed situation and the outcomes of previous executed actions.
-Give a brief rationale explaining the next useful action, then select exactly one allowed action.
-Return JSON with "rationale" and "action", for example:
-{"rationale":"The tree is directly ahead, so collect wood.","action":"Do"}
-Use only observed information. Do not output extra text outside the JSON object.
+Play Crafter using ReAct: observe, reason when useful, act, then use the real
+next observation to check the outcome and revise your plan.
+
+Your goal is to survive and unlock achievements. Use only the game instructions
+and observed evidence. Track the current subgoal, check resource and nearby-tool
+requirements, and compare inventory, status and surroundings before and after
+an action. If an action fails or the situation changes, identify the missing
+requirement and choose a useful next step instead of repeating it blindly.
+Handle urgent survival needs and return to unfinished goals when feasible.
+
+Return exactly one JSON object with an allowed "action". Add a brief "rationale"
+when you need to plan, interpret feedback or change course; omit it when the next
+action is straightforward. These fields represent Thought and Action. Do not
+invent an Observation, claim an action succeeded before feedback, or output
+multiple actions. Previous assistant actions are submitted candidates; when the
+environment reports an invalid output, its reported fallback is what executed.
+
+The following are two independent demonstrations, not the current episode.
+Observation excerpts omit unrelated terrain and status. Actions and inventory
+changes are checked against real Crafter transitions in tests/test_react.py.
+
+Example 1: Crafting followed by a straightforward action.
+Observation: A table is nearby. You face a tree. Inventory: wood 1, wood_pickaxe 0.
+Assistant: {"rationale":"The table and one wood let me make a pickaxe for collecting stone.","action":"Make Wood Pickaxe"}
+Observation: The table is still nearby and you face the tree. Inventory: wood 0, wood_pickaxe 1.
+Assistant: {"action":"Do"}
+Observation: The tree in front became grass. Inventory: wood 1, wood_pickaxe 1.
+
+Example 2: Recovering from a failed interaction.
+Observation: You face stone to the north. A tree is one step east. Inventory: wood 0, stone 0, wood_pickaxe 0.
+Assistant: {"action":"Do"}
+Observation: The stone remains in front. The tree is still one step east. Inventory: wood 0, stone 0, wood_pickaxe 0.
+Assistant: {"rationale":"Mining did not work without a wood pickaxe. I need wood and a table first; turn toward the tree to the east.","action":"Move East"}
+Observation: Movement was blocked by the tree, and you now face it. Inventory: wood 0, stone 0, wood_pickaxe 0.
+Assistant: {"action":"Do"}
+Observation: The tree in front became grass. Inventory: wood 1, stone 0, wood_pickaxe 0.
+
+End of demonstrations. Respond only for the Current Observation above, using
+the actual episode history. Output one JSON object and no other text.

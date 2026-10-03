@@ -27,8 +27,8 @@ class BaseAgent(BALROGAgent):
             self.prompt_builder.update_action(prev_action)
         self.prompt_builder.update_observation(observation)
 
-    def ask(self, prompt_name, extra=""):
-        messages = copy.deepcopy(self.prompt_builder.get_prompt())
+    def ask(self, prompt_name, extra="", messages=None):
+        messages = copy.deepcopy(self.prompt_builder.get_prompt() if messages is None else messages)
         messages[-1].content += "\n\n" + (PROMPTS / f"{prompt_name}.txt").read_text(encoding="utf-8") + extra
         response = self.client.generate(messages)
         self.responses.append(response)

@@ -1,0 +1,32 @@
+{
+  "action_question": "Choose the best executable action from above.",
+  "dependencies": {
+    "Did the last player action succeed? If not, why?": [
+      "What was the last action taken by the player?"
+    ],
+    "For each object in the list, are the requirements met for interaction?": [
+      "List objects in the current observation. For each object, breifly answer what resource it provides and its requirement."
+    ],
+    "List top 3 sub-tasks the player should follow. Indicate their priority out of 5.": [
+      "List objects in the current observation. For each object, breifly answer what resource it provides and its requirement.",
+      "For each object in the list, are the requirements met for interaction?"
+    ],
+    "What are the requirements for the top sub-task? What should the player do first?": [
+      "List top 3 sub-tasks the player should follow. Indicate their priority out of 5."
+    ],
+    "List top 5 actions the player should take and the requirement for each action. Choose ONLY from the list of all actions. Indicate their priority out of 5.": [
+      "What are the requirements for the top sub-task? What should the player do first?"
+    ],
+    "For each action in the list, are the requirements met?": [
+      "List top 5 actions the player should take and the requirement for each action. Choose ONLY from the list of all actions. Indicate their priority out of 5."
+    ],
+    "Choose the best executable action from above.": [
+      "What was the last action taken by the player?",
+      "Did the last player action succeed? If not, why?",
+      "List top 5 actions the player should take and the requirement for each action. Choose ONLY from the list of all actions. Indicate their priority out of 5.",
+      "For each action in the list, are the requirements met?"
+    ],
+    "What was the last action taken by the player?": [],
+    "List objects in the current observation. For each object, breifly answer what resource it provides and its requirement.": []
+  }
+}
