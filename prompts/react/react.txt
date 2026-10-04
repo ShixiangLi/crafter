@@ -8,23 +8,31 @@ an action. If an action fails or the situation changes, identify the missing
 requirement and choose a useful next step instead of repeating it blindly.
 Handle urgent survival needs and return to unfinished goals when feasible.
 
-Return exactly one JSON object with an allowed "action". Add a brief "rationale"
-when you need to plan, interpret feedback or change course; omit it when the next
-action is straightforward. These fields represent Thought and Action. Do not
-invent an Observation, claim an action succeeded before feedback, or output
-multiple actions. Previous assistant actions are submitted candidates; when the
+Return exactly one JSON object per response:
+- Thought only: {"rationale":"your reasoning"}. This updates the reasoning
+  context without taking any game action. Continue when the controller acknowledges it.
+- Action: {"action":"one allowed action"}. Add a brief "rationale" if useful;
+  omit it when the action is straightforward.
+Choose thoughts sparsely for goal decomposition, progress tracking, selecting the
+next subgoal, and adapting to real feedback. Thought-only responses do not change
+the inventory, terrain, time or vitals. When asked to act because the thinking
+limit is reached, return an action. Do not invent an Observation, claim an action
+succeeded before feedback, or output multiple actions. Previous assistant actions are submitted candidates; when the
 environment reports an invalid output, its reported fallback is what executed.
 
 The following are two independent demonstrations, not the current episode.
-Observation excerpts omit unrelated terrain and status. Actions and inventory
-changes are checked against real Crafter transitions in tests/test_react.py.
+Observation excerpts omit unrelated terrain and status.
 
-Example 1: Crafting followed by a straightforward action.
+Example 1: Planning without advancing the game, then crafting and gathering.
 Observation: A table is nearby. You face a tree. Inventory: wood 1, wood_pickaxe 0.
-Assistant: {"rationale":"The table and one wood let me make a pickaxe for collecting stone.","action":"Make Wood Pickaxe"}
+Assistant: {"rationale":"My subgoal is collecting stone. I first need a wood pickaxe, then more wood for a stone pickaxe."}
+Controller: Thought recorded. The game has not advanced.
+Assistant: {"action":"Make Wood Pickaxe"}
 Observation: The table is still nearby and you face the tree. Inventory: wood 0, wood_pickaxe 1.
 Assistant: {"action":"Do"}
 Observation: The tree in front became grass. Inventory: wood 1, wood_pickaxe 1.
+Assistant: {"rationale":"The wood pickaxe is ready and I have replacement wood. Next I should locate stone and mine it."}
+Controller: Thought recorded. The game has not advanced.
 
 Example 2: Recovering from a failed interaction.
 Observation: You face stone to the north. A tree is one step east. Inventory: wood 0, stone 0, wood_pickaxe 0.
@@ -35,5 +43,5 @@ Observation: Movement was blocked by the tree, and you now face it. Inventory: w
 Assistant: {"action":"Do"}
 Observation: The tree in front became grass. Inventory: wood 1, stone 0, wood_pickaxe 0.
 
-End of demonstrations. Respond only for the Current Observation above, using
-the actual episode history. Output one JSON object and no other text.
+End of demonstrations. Respond only for the actual episode observations and
+history provided below. Output one JSON object and no other text.

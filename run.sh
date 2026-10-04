@@ -38,7 +38,7 @@ done
 
 if "$SHOW_HELP"; then
   echo "Launcher option: --gpu N starts/reuses a GPU-specific Ollama on port 11500+N."
-  echo "Without --gpu, use the configured Ollama service. --dry-run never starts a service."
+  echo "Without --gpu, use the configured API service. --dry-run never starts a service."
 elif [[ -n "$GPU" ]]; then
   for arg in "${ARGS[@]}"; do
     [[ "$arg" != *client.base_url=* ]] || { echo "Do not combine --gpu with client.base_url." >&2; exit 2; }
@@ -49,10 +49,10 @@ elif [[ -n "$GPU" ]]; then
   GPU=$((10#$GPU))
   PORT=$((11500 + GPU))
   HOST="127.0.0.1:$PORT"
-  ARGS+=("client.base_url=http://$HOST/v1")
-  # Validate experiment arguments before starting a persistent service.
-  "$PROJECT_ROOT/.venv/bin/python" -B "$PROJECT_ROOT/scripts/evaluate.py" --dry-run "${ARGS[@]}" >/dev/null
+  ARGS+=("--ollama-gpu" "client.base_url=http://$HOST/v1")
   if ! "$DRY_RUN"; then
+    # Resolve the model from the effective experiment config before service startup.
+    MODEL_DIR="$("$PROJECT_ROOT/.venv/bin/python" -B "$PROJECT_ROOT/scripts/ollama_models.py" --directory "${ARGS[@]}")"
     for tool in ollama curl flock; do
       command -v "$tool" >/dev/null || { echo "$tool is required for --gpu." >&2; exit 2; }
     done
@@ -70,7 +70,15 @@ elif [[ -n "$GPU" ]]; then
         curl --noproxy '*' -fsS --max-time 3 "http://$HOST/api/version" >/dev/null || {
           echo "Managed Ollama is not ready; inspect $LOG_FILE (PID $PID)." >&2; exit 1;
         }
-        echo "Reusing Ollama: GPU $GPU, $HOST, PID $PID" >&2
+        # Do not silently reuse a server with a different model store.
+        if ! grep -zFxq "OLLAMA_MODELS=$MODEL_DIR" "/proc/$PID/environ" &&
+           ! { ! grep -zq '^OLLAMA_MODELS=' "/proc/$PID/environ" &&
+               [[ "$MODEL_DIR" == "$HOME/.ollama/models" ]] &&
+               grep -zFxq "HOME=$HOME" "/proc/$PID/environ"; }; then
+          echo "Managed Ollama uses another model directory. Stop PID $PID when idle, then rerun with OLLAMA_MODELS=$MODEL_DIR." >&2
+          exit 1
+        fi
+        echo "Reusing Ollama: GPU $GPU, $HOST, PID $PID; models: $MODEL_DIR" >&2
       else
         if (echo >"/dev/tcp/127.0.0.1/$PORT") 2>/dev/null; then
           echo "Port $PORT is occupied by an unverified service; refusing to reuse it." >&2
@@ -78,6 +86,7 @@ elif [[ -n "$GPU" ]]; then
         fi
         # GPU UUIDs avoid CUDA/NVML numeric ordering differences. Disable Vulkan fallback.
         CUDA_VISIBLE_DEVICES="$GPU_UUID" OLLAMA_HOST="$HOST" OLLAMA_VULKAN=0 \
+          OLLAMA_MODELS="$MODEL_DIR" OLLAMA_NOPRUNE=true \
           nohup ollama serve >>"$LOG_FILE" 2>&1 < /dev/null 9>&- &
         PID=$!
         echo "$PID" >"$PID_FILE"
@@ -100,6 +109,7 @@ elif [[ -n "$GPU" ]]; then
         echo "Started Ollama: GPU $GPU, $HOST, PID $PID; log: $LOG_FILE" >&2
       fi
     ) 9>"$SERVICE_DIR/gpu_$GPU.lock"
+    "$PROJECT_ROOT/.venv/bin/python" -B "$PROJECT_ROOT/scripts/ollama_models.py" --check "${ARGS[@]}"
   fi
 fi
 

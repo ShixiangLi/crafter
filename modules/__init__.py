@@ -1,1 +1,1 @@
-"""Algorithm components; environment, history and clients belong to BALROG."""
+"""Shared configuration, API adaptation, and reusable algorithm components."""

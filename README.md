@@ -1,6 +1,6 @@
 # Crafter 智能体算法研究
 
-所有智能体统一使用 BALROG 的环境、观测、模型客户端、动作校验和评估指标。外层仅负责实验配置与算法接入，不修改 `BALROG/` 源码。
+所有智能体统一使用 BALROG 的环境、观测、动作校验和评估指标，模型请求通过同一个 OpenAI 兼容客户端发送。外层仅负责实验配置与算法接入，不修改 `BALROG/` 源码。
 
 ## 运行
 
@@ -17,14 +17,14 @@
 ./run.sh --agent ours
 ./run.sh --agent spring
 
-# 也可以选择实验配置
-./run.sh --config experiments/planner.yaml
+# 也可以显式选择算法配置
+./run.sh --config configs/planner.yaml
 
 # 查看生效配置，不调用模型、不生成实验结果
 ./run.sh --agent ours --dry-run
 ```
 
-`run.sh` 使用项目 `.venv`，调用 `scripts/evaluate.py`。运行模型前，确保 Ollama 已启动且模型已安装。所有方法通过 BALROG 客户端访问 Ollama 的 `/v1` 兼容接口。
+`run.sh` 使用项目 `.venv`，调用 `scripts/evaluate.py`。默认使用 Ollama，运行前确保服务已启动且模型已安装；也可通过配置连接远程 API。
 
 `run.sh` 自动为本次进程及其子进程设置本机代理绕过（`127.0.0.1`、`localhost`、`::1`），合并并保留已有 `NO_PROXY` / `no_proxy` 规则。不会修改系统代理或影响其他正在运行的实验。直接执行 Python 入口时不经过此设置。
 
@@ -35,6 +35,41 @@
 | `planner` | 外层基线：默认每 10 步更新目标计划，再选择动作 |
 | `spring` | 官方 9 节点问答 DAG、游戏手册和最近两步观测 |
 | `ours` | 新算法入口，目前与 planner 相同，尚未实现新方法 |
+
+## 通用 API 配置
+
+所有智能体固定读取同一个 `configs/default.yaml`，其中统一设置模型/API、温度、生成上限和评测预算。`configs/` 中其余 YAML 只选择智能体及算法参数，不能覆盖这些公共设置。默认接口配置：
+
+```yaml
+api:
+  base_url: http://127.0.0.1:11434/v1
+  model: qwen3:8b
+  api_key_env: null
+```
+
+`base_url` 填完整的兼容 API 根地址；客户端不会自动补 `/v1`。无需认证时 `api_key_env: null`，需要认证时填写保存密钥的环境变量名。密钥只在请求初始化时读取，不写入配置快照或结果；指定的变量未设置或为空时，实验开始前报错。不要在 YAML 中写实际密钥或使用 `${oc.env:...}` 将密钥插入配置。
+
+使用 DeepSeek 时，只需将 **`configs/default.yaml` 中的 `api` 段**改成下面的配置，所有智能体立即共用它（模型名按 [DeepSeek 官方文档](https://api-docs.deepseek.com/)及账户可用模型填写）：
+
+```yaml
+api:
+  base_url: https://api.deepseek.com
+  model: deepseek-flash
+  api_key_env: DEEPSEEK_API_KEY
+```
+
+```bash
+# 在当前终端安全输入密钥（不回显、不写入 shell 历史）
+read -rsp 'DeepSeek API Key: ' DEEPSEEK_API_KEY
+export DEEPSEEK_API_KEY
+
+# 同一模型下比较算法；先用相同种子进行短试验
+./run.sh --agent naive --episodes 1 --max-steps 3 --seed 0
+./run.sh --agent react --episodes 1 --max-steps 3 --seed 0
+./run.sh --agent spring --episodes 1 --max-steps 3 --seed 0
+```
+
+远程 API 不使用 `--gpu`；混用时启动器会报错。`--model` 仍可覆盖模型，末尾 `client.base_url=...`、`client.model_id=...` 和 `client.api_key_env=...` 仍具有最高优先级。对比算法时保持这些覆盖参数一致；常规切换模型统一修改公共 `api` 配置。接口采用 Chat Completions，复用 BALROG 的生成、重试和 Token 统计；不额外实现各供应商的专有接口。
 
 ## 按 GPU 启动独立 Ollama
 
@@ -49,13 +84,19 @@
 
 `--gpu N` 使用 `nvidia-smi` 的 GPU 编号，通过 GPU UUID 绑定独立 Ollama，端口为 `11500 + N`。首次自动启动，后续仅复用本脚本记录且绑定匹配的进程；端口被其他服务占用时会报错，不重启或停止原有服务。实现依据 [Ollama GPU 选择说明](https://docs.ollama.com/gpu)。
 
-不传 `--gpu` 时保持原来的服务配置。`--gpu` 不能与 `client.base_url` 同时指定。独立服务使用当前用户的模型目录（或继承 `OLLAMA_MODELS`）；若模型不在其中，先执行例如 `OLLAMA_HOST=127.0.0.1:11501 ollama pull qwen3:8b`。不会自动下载模型。
+不传 `--gpu` 时保持原来的服务配置。`--gpu` 不能与 `client.base_url` 同时指定。独立服务优先使用显式 `OLLAMA_MODELS`；未指定时，按目标模型查找当前用户及常见系统目录中可读的已有模型，否则使用当前用户的 `~/.ollama/models`。不同 GPU 服务共用该目录，无需逐 GPU 下载。系统用户的目录若没有读取权限，不会修改权限或强行读取。
+
+启动实验前会查询目标服务确认模型存在；缺失时立即报错并给出下载命令，不会创建失败实验再重试五次。例如 `OLLAMA_HOST=127.0.0.1:11501 ollama pull qwen3:8b`，只需准备一次，所有使用同一目录的服务即可访问。脚本不会自动下载模型。若显式切换目录而已有独立服务仍使用旧目录，脚本会提示在服务空闲时停止该 PID 后重跑，不会擅自重启服务。
 
 服务在实验退出后保留，便于复用；日志、PID 和启动锁位于 `outputs/ollama/gpu_N.*`。需要停止时，确认对应实验已结束，再执行例如 `kill "$(cat outputs/ollama/gpu_1.pid)"`。已有服务若也在使用同一张 GPU，仍会共享算力；指定不同 GPU 的独立服务才能分开队列。同一个 `--gpu N` 的实验会共用同一服务。
 
 ## 配置与种子
 
-公共设置位于 `configs/default.yaml`，实验配置位于 `experiments/`。优先级为：末尾 BALROG Hydra 覆盖参数 > 命令行选项 > 实验配置 > 公共配置 > 上游默认配置。
+`configs/default.yaml` 统一模型/API、推理设置和评测预算；其余配置仅允许 `agent`、`history_length`、`replan_interval`，ReAct 还可设置 `max_thoughts`。例如 `configs/planner.yaml` 可在 `agent: planner` 后配置重规划间隔。算法配置包含模型/API 或评测参数时会报错。
+
+`--agent react` 自动加载 `configs/react.yaml`；`naive` 对应 `configs/balrog_baseline.yaml`，也是不传参数时的默认选择。`--config` 用于显式指定算法配置；同时传入 `--agent` 时两者必须一致。请通过这两个选项选择算法，不能通过 Hydra 的 `agent.type` 切换，以免混入另一算法的参数。
+
+其余参数优先级为：末尾 BALROG Hydra 覆盖参数 > 命令行选项 > 算法配置 > 公共配置 > 上游默认配置。模型/API 和评测参数从公共配置读取，可通过命令行临时覆盖。
 
 ```bash
 ./run.sh --agent planner --model qwen3:8b --episodes 1 --max-steps 200 --seed 0
@@ -77,28 +118,27 @@ done
 
 公共配置统一所有方法的默认推理设置：温度 1.0、生成上限 8192、纯文本输入、单工作进程。其他方法默认使用 16 条历史，SPRING 固定使用最近两步完整观测。比较方法时请保持模型与预算一致，并报告实际 token 消耗。
 
-已移除旧 `runner` 切换、`--seeds`、`num_ctx`、独立 Ollama JSON 客户端和 research 输出格式；统一使用 `--episodes`、`--seed` 及 BALROG 参数。本启动器每次创建新运行，不支持断点续跑。
+每次启动都会创建新的结果目录，当前不支持断点续跑。
 
 ## 代码结构
 
 ```text
-run.sh                    启动入口
-scripts/evaluate.py       配置组装，调用 BALROG EvaluatorManager 与汇总函数
-agents/factory.py         扩展上游工厂；原生方法委托给 BALROG
-agents/base_agent.py      自定义方法共享的 JSON 决策与 LLMResponse 适配
-agents/react_agent.py     ReAct 推理、动作、反馈闭环
-agents/planner_agent.py   规划基线
-agents/our_agent.py       新算法入口
-agents/spring_agent.py    SPRING 问答策略
-modules/spring.py         问题图遍历与动作匹配
-prompts/spring/           官方问题、手册、来源版本和许可
-modules/planner.py        计划更新
-modules/executor.py       按计划选择原子动作
-prompts/                  自定义算法提示词
-configs/、experiments/    公共设置与实验选择
-BALROG/                   上游环境、客户端、历史和评估实现
-outputs/results/          实验结果
-tests/                   接入契约与真实环境集成测试
+run.sh                       启动入口与 GPU 服务管理
+configs/default.yaml         所有算法共用的模型/API、推理和评测设置
+configs/*.yaml               各算法选择与参数
+scripts/evaluate.py          执行 BALROG 评估并汇总结果
+scripts/ollama_models.py     GPU 服务的模型目录选择与预检
+modules/config.py           两个脚本共用的配置加载和校验
+modules/api_client.py       兼容 API 认证，复用 BALROG 请求逻辑
+agents/factory.py           原生 NaiveAgent 与自定义智能体的统一接入
+agents/base_agent.py        JSON 决策、提示词缓存和 LLMResponse 适配
+agents/*_agent.py           ReAct、Planner、SPRING 与新算法入口
+modules/{planner,executor,spring}.py  算法组件
+prompts/react/react.txt     ReAct 提示词
+prompts/planner/            planner.txt 与 executor.txt
+prompts/spring/             官方问题、手册、来源版本和许可
+BALROG/                     上游环境、客户端、历史和评估实现
+outputs/results/            实验结果
 ```
 
 开发新算法时，主要修改 `agents/our_agent.py`，按需添加算法组件。实现 BALROG 接口：
@@ -125,27 +165,28 @@ outputs/results/<运行编号>/
         └── default_run_00.csv    动作、理由、观测、奖励和结束标志
 ```
 
-BALROG 的 `progression_percentage` 为平均解锁成就数 / 22 × 100；它不是 Crafter score。既有 `outputs/results/balrog/` 数据保留，可按相同原生格式读取。
+BALROG 的 `progression_percentage` 为平均解锁成就数 / 22 × 100；它不是 Crafter score。
 
 缺失回合不会自动进入 BALROG 成绩均值；运行不完整时启动器返回非零状态，并记录 `status.json`。分析结果时同时检查回合完整性。CSV 的 Action 是模型提交的候选动作；非法候选实际执行 Noop，回合 JSON 的 `failed_candidates` 记录非法候选。
 
-## 验证
+## 检查配置
 
 ```bash
-.venv/bin/python -B -m unittest discover -s tests -v
+./run.sh --agent react --dry-run
+./run.sh --config configs/planner.yaml --dry-run
 ```
 
-测试使用真实 BALROG/Crafter 环境与模拟模型响应，不需要连接 Ollama，也不代表模型性能测试。
+`--dry-run` 只校验并打印生效配置，不调用模型、启动服务或生成结果，也不验证 API 连通性。实际连接可用前面的单回合、少步数命令检查；远程 API 会产生相应调用费用。
 
 ## SPRING
 
 ```bash
-./run.sh --config experiments/spring.yaml --episodes 1 --max-steps 3 --seed 0
+./run.sh --config configs/spring.yaml --episodes 1 --max-steps 3 --seed 0
 ```
 
 每个环境步执行 9 次问答，按依赖传递答案后选择一个原子动作，全部调用成本计入 BALROG 结果。节点问答、耗时、结束原因和资源哈希记录在 CSV 的 `Reasoning` 列；执行中也逐节点写入 `eval.log`。
 
-这是基于官方策略的 BALROG 适配实现，默认模型、观测和无效动作回退与原论文不同。来源、许可和完整差异见 [SPRING 说明](prompts/spring/README.md)。
+这是基于官方策略的 BALROG 适配实现，动作匹配失败按官方规则回退 Do；默认模型与观测和原论文不同。来源、许可和完整差异见 [SPRING 说明](prompts/spring/README.md)。
 
 ## ReAct
 
@@ -153,8 +194,8 @@ BALROG 的 `progression_percentage` 为平均解锁成就数 / 22 × 100；它�
 ./run.sh --agent react --episodes 1 --max-steps 3 --seed 0
 ```
 
-ReAct 每步一次调用，输出 `{"rationale":"简短推理","action":"Do"}`，简单动作可省略 `rationale`。下一步会看到历史推理、提交动作及环境的真实反馈；每份观测保留当时的库存、生命状态与周围环境。历史窗口由 `agent.max_text_history` 控制（默认 16，包含当前观测），按完整观测/决策对截断，不使用 `agent.max_cot_history` 再删除推理。每回合重置。
+ReAct 允许自主稀疏思考：输出 `{"rationale":"推理"}` 时只更新上下文，继续调用模型；输出 `{"action":"Do"}` 时才推进一个游戏步，简单动作可直接输出，也可附带简短理由。`configs/react.yaml` 的 `max_thoughts` 默认 3，最多进行 3 次独立思考，再请求动作；全部调用的 Token 一并计入结果。日志记录全部 `thoughts`、`llm_calls` 及 `protocol: sparse-thought-v1`。
 
-提示词包含两个自编的短交互示例，覆盖制作成功、直接行动和交互失败后的调整，相关状态变化由真实 Crafter 环境测试验证。示例不作为当前回合经历；不添加虚构环境反馈，不引入额外规划器或跨回合反思模块。
+下一步会看到历史思考、提交动作及环境的真实反馈；每份观测保留当时的库存、生命状态与周围环境。历史窗口默认 16 步（包含当前观测），按完整观测/决策对截断，每回合重置。示例和协议固定放在首条指令中，历史只保存实际轨迹。提示词包含两个本项目编写的 Crafter 示例。
 
-这是 [ReAct](https://react-lm.github.io/) 在 Crafter 上的适配：使用 JSON 表达 Thought/Action、有限历史窗口和项目模型配置。原论文没有 Crafter 标准实现，不能把本项目结果视为原论文成绩复现。旧版 ReAct 仅记录简短理由；新旧结果应按代码版本区分。
+这是 [ReAct](https://react-lm.github.io/) 在 Crafter 上的适配。原论文没有 Crafter 标准实现；JSON 协议、历史窗口和思考上限是本项目的适配。来源版本、保留机制及完整差异见 [ReAct 说明](prompts/react/README.md)。旧版固定一次调用合并理由和动作，新旧结果应按协议版本区分。

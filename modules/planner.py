@@ -12,7 +12,7 @@ class Planner:
     def update(self, agent):
         if self.plan and agent.step % self.interval != 0:
             return None
-        answer = agent.ask("planner", f"\nPrevious plan: {json.dumps(self.plan)}")
+        answer = agent.ask("planner/planner", f"\nPrevious plan: {json.dumps(self.plan)}")
         plan = answer.get("plan")
         if (
             isinstance(plan, list)

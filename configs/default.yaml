@@ -1,5 +1,9 @@
-model: qwen3:8b
-ollama_url: http://127.0.0.1:11434
+# 所有智能体共用的模型/API、推理参数与评测设置。
+# 切换服务只修改这里的 api；同目录其他 YAML 仅配置算法。
+api:
+  base_url: https://api.deepseek.com
+  model: deepseek-flash
+  api_key_env: sk-4004b4e311f54f5cac3bb261638ce1da
 balrog_path: BALROG
 output_dir: outputs/results
 num_episodes: 10

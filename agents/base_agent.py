@@ -13,6 +13,7 @@ class BaseAgent(BALROGAgent):
     def __init__(self, client_factory, prompt_builder, config):
         super().__init__(client_factory, prompt_builder)
         self.config = config
+        self.prompts = {}
         self.reset()
 
     def reset(self):
@@ -27,9 +28,15 @@ class BaseAgent(BALROGAgent):
             self.prompt_builder.update_action(prev_action)
         self.prompt_builder.update_observation(observation)
 
-    def ask(self, prompt_name, extra="", messages=None):
+    def load_prompt(self, name):
+        if name not in self.prompts:
+            self.prompts[name] = (PROMPTS / f"{name}.txt").read_text(encoding="utf-8")
+        return self.prompts[name]
+
+    def ask(self, prompt_name=None, extra="", messages=None):
         messages = copy.deepcopy(self.prompt_builder.get_prompt() if messages is None else messages)
-        messages[-1].content += "\n\n" + (PROMPTS / f"{prompt_name}.txt").read_text(encoding="utf-8") + extra
+        if prompt_name is not None:
+            messages[-1].content += "\n\n" + self.load_prompt(prompt_name) + extra
         response = self.client.generate(messages)
         self.responses.append(response)
         try:
