@@ -80,7 +80,8 @@ class SPRINGAgent(BaseAgent):
 
         answers = self.graph.run(ask)
         raw_action = answers[self.graph.action_question]
-        action = match_action(raw_action, self.actions)
+        matched_action = match_action(raw_action, self.actions)
+        action = matched_action or "Do"  # Official SPRING fallback (paper section 2.2).
         details = {
             "strategy": "spring",
             "step": self.step,
@@ -89,11 +90,12 @@ class SPRINGAgent(BaseAgent):
             "llm_calls": len(responses),
             "raw_action": raw_action,
             "action": action,
-            "parse_error": None if action else "No allowed action found in final answer",
+            "parse_error": None if matched_action else "No allowed action found in final answer",
+            "fallback_action": None if matched_action else "Do",
         }
         self.step += 1
         return responses[-1]._replace(
-            completion=action if action is not None else raw_action,
+            completion=action,
             reasoning=json.dumps(details, ensure_ascii=False),
             input_tokens=sum(response.input_tokens for response in responses),
             output_tokens=sum(response.output_tokens for response in responses),

@@ -58,6 +58,6 @@ class SpringGraph:
 def match_action(answer, actions):
     """Keep the official ordered, case-insensitive substring action matching.
 
-    Unmatched text is left invalid for BALROG's action validator (Noop fallback).
+    Return None on failure; the SPRING agent then executes the official Do fallback.
     """
     return next((action for action in actions if action.lower() in answer.lower()), None)
