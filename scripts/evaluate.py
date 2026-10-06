@@ -18,7 +18,7 @@ def main(argv=None):
         return 0
     sys.path.insert(0, str(source))
     from agents.factory import AgentFactory
-    from balrog.evaluator import EvaluatorManager
+    from utils.recording import EvaluatorManager
     from balrog.utils import collect_and_summarize_results, print_summary_table, setup_environment
 
     if config.client.client_name in {"openai_compatible", "vllm"}:
@@ -52,6 +52,13 @@ def main(argv=None):
     status = {"expected_episodes": expected, "completed_episodes": completed,
               "missing_episodes": expected - completed, "error": error}
     (output / "status.json").write_text(json.dumps(status, indent=2) + "\n", encoding="utf-8")
+    try:
+        from utils.visualization import analyze_run
+        report = analyze_run(output)
+        print(f"Analysis: {report}", flush=True)
+    except Exception:
+        logging.exception("Visualization failed; evaluation results are saved")
+        print("Visualization failed; see eval.log. Evaluation results are saved.", file=sys.stderr)
     if error or completed != expected:
         print(f"Incomplete evaluation: {status}", file=sys.stderr)
         return 1

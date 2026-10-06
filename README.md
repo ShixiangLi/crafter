@@ -128,6 +128,10 @@ configs/default.yaml         所有算法共用的模型/API、推理和评测�
 configs/*.yaml               各算法选择与参数
 scripts/evaluate.py          执行 BALROG 评估并汇总结果
 scripts/ollama_models.py     GPU 服务的模型目录选择与预检
+scripts/analyze.py           为已有试验生成或重新生成分析报告
+utils/recording.py           外层观测记录，保留原生评估流程
+utils/statistics.py          结果读取、成就成功率和 Crafter score
+utils/visualization.py       回合图、试验汇总图和 HTML 报告
 agents/factory.py           原生 NaiveAgent 与自定义智能体的统一接入
 agents/*_agent.py           各方法的接入入口，导出 modules 中的实现
 modules/common/config.py    两个脚本共用的配置加载和校验
@@ -164,6 +168,12 @@ outputs/results/<运行编号>/
 ├── eval.log                     运行日志
 ├── status.json                  预期、完成、缺失回合数和顶层错误
 ├── summary.json                 BALROG 总汇总
+├── traces/crafter/default/       每回合状态与模型调用的 JSONL 记录
+├── analysis/
+│   ├── report.html               可在浏览器打开的完整分析报告
+│   ├── overview.png              试验汇总图
+│   ├── analysis_summary.json     成就成功率、Crafter score 和完成情况
+│   └── episodes/crafter/default/ 每回合六面板分析图
 └── crafter/
     ├── crafter_summary.json      进度、标准误、步数与 token
     └── default/
@@ -174,6 +184,18 @@ outputs/results/<运行编号>/
 BALROG 的 `progression_percentage` 为平均解锁成就数 / 22 × 100；它不是 Crafter score。
 
 缺失回合不会自动进入 BALROG 成绩均值；运行不完整时启动器返回非零状态，并记录 `status.json`。分析结果时同时检查回合完整性。CSV 的 Action 是模型提交的候选动作；非法候选实际执行 Noop，回合 JSON 的 `failed_candidates` 记录非法候选。
+
+试验正常结束或因异常结束后，自动生成 `analysis/report.html`。每回合图包含生存状态、成就里程碑、当前资源持有量、请求与执行动作、每次模型生成的 Token、生成耗时。状态从环境返回的 `info` 和可见观测中记录，包含第 0 步初始状态；不传给智能体。ReAct 独立思考和 SPRING 问答分别记录，因此环境步与模型调用的横轴不同。耗时包含客户端内部重试等待；Token 只包括成功返回的响应，内部失败尝试的用量可能无法取得。记录逐行落盘，异常回合保留已有数据；强制终止后可手动生成报告。
+
+汇总只使用完整回合计算 22 项成就成功率和 [Crafter 官方分数](https://github.com/danijar/crafter/blob/main/analysis/common.py)：`exp(mean(log(1 + 成功率百分数))) - 1`。没有完整回合时分数标为不可用，部分回合单独展示；同一种子的重复回合不等于独立地图样本。图中的钻石成功指解锁 `collect_diamond`。这是当前评估回合的分数，与原论文的训练预算和统计范围需分别说明。
+
+已有试验可重新分析，不调用模型：
+
+```bash
+.venv/bin/python -B scripts/analyze.py outputs/results/<运行编号>
+```
+
+历史结果没有保存的生命、库存、成就时间点和调用数据会标注为未记录。报告和 PNG 可离线查看；共享完整报告时保留 `analysis/` 目录中的图片。绘图使用 Matplotlib。分析或绘图失败不会覆盖原始结果，错误写入 `eval.log`。
 
 ## 检查配置
 
