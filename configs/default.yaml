@@ -3,7 +3,7 @@
 api:
   base_url: https://api.deepseek.com
   model: deepseek-flash
-  api_key_env: sk-4004b4e311f54f5cac3bb261638ce1da
+  api_key_env: DEEPSEEK_API_KEY
 balrog_path: BALROG
 output_dir: outputs/results
 num_episodes: 10
