@@ -8,7 +8,7 @@ import urllib.request
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from modules.config import load_config
+from modules.common.config import load_config
 
 
 def model_directory(model):

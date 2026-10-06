@@ -1,4 +1,4 @@
-"""OpenAI-compatible transport; reuse BALROG generation, retries and accounting."""
+"""Shared API transport; reuse BALROG generation, retries and accounting."""
 import os
 from functools import partial
 

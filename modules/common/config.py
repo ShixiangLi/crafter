@@ -7,7 +7,8 @@ from urllib.parse import urlparse
 import yaml
 from hydra import compose, initialize_config_dir
 
-ROOT = Path(__file__).resolve().parents[1]
+from . import ROOT
+
 DEFAULT_CONFIG = ROOT / "configs/default.yaml"
 
 
@@ -117,4 +118,3 @@ def load_config(argv=None):
         parser.error("--gpu requires the local Ollama compatibility API without a key")
     config.eval.output_dir = str((ROOT / config.eval.output_dir).resolve())
     return args, source, config
-

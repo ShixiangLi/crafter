@@ -1,1 +1,1 @@
-"""Shared configuration, API adaptation, and reusable algorithm components."""
+"""Agent algorithms grouped by method, with shared utilities in common."""

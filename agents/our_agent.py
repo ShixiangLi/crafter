@@ -1,7 +1,4 @@
-from .planner_agent import PlannerAgent
+"""BALROG entry for the new algorithm."""
+from modules.ours import OurAgent
 
-
-class OurAgent(PlannerAgent):
-    # Algorithm extension point. Currently identical to the planner baseline.
-    # BALROG calls reset() per episode and act(observation, prev_action) per step.
-    pass
+__all__ = ["OurAgent"]

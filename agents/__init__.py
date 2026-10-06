@@ -1,4 +1,4 @@
-"""Project agents implementing BALROG's agent interface."""
+"""BALROG entries and registration; algorithm implementations live in modules."""
 from .our_agent import OurAgent
 from .planner_agent import PlannerAgent
 from .react_agent import ReActAgent

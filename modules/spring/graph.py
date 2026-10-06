@@ -1,4 +1,4 @@
-"""SPRING question DAG, adapted from Holmeswww/SPRING (MIT, Yue Wu).
+"""SPRING question DAG and action matching, from Holmeswww/SPRING (MIT, Yue Wu).
 
 Original questions and attribution are in prompts/spring/.
 """

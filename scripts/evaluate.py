@@ -8,7 +8,7 @@ from pathlib import Path
 from omegaconf import OmegaConf
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
-from modules.config import load_config
+from modules.common.config import load_config
 
 
 def main(argv=None):
@@ -22,7 +22,7 @@ def main(argv=None):
     from balrog.utils import collect_and_summarize_results, print_summary_table, setup_environment
 
     if config.client.client_name in {"openai_compatible", "vllm"}:
-        from modules.api_client import api_key
+        from modules.common.api_client import api_key
         api_key(config.client)  # Fail before creating a run if a required key is missing.
     else:
         setup_environment(original_cwd=str(source))

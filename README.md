@@ -128,12 +128,16 @@ configs/default.yaml         所有算法共用的模型/API、推理和评测�
 configs/*.yaml               各算法选择与参数
 scripts/evaluate.py          执行 BALROG 评估并汇总结果
 scripts/ollama_models.py     GPU 服务的模型目录选择与预检
-modules/config.py           两个脚本共用的配置加载和校验
-modules/api_client.py       兼容 API 认证，复用 BALROG 请求逻辑
 agents/factory.py           原生 NaiveAgent 与自定义智能体的统一接入
-agents/base_agent.py        JSON 决策、提示词缓存和 LLMResponse 适配
-agents/*_agent.py           ReAct、Planner、SPRING 与新算法入口
-modules/{planner,executor,spring}.py  算法组件
+agents/*_agent.py           各方法的接入入口，导出 modules 中的实现
+modules/common/config.py    两个脚本共用的配置加载和校验
+modules/common/api_client.py 兼容 API 认证，复用 BALROG 请求逻辑
+modules/common/base_agent.py JSON 决策、提示词缓存和 LLMResponse 适配
+modules/react/policy.py     ReAct 历史、独立思考与动作选择
+modules/spring/policy.py    SPRING 观测记忆、问答调用与成本记录
+modules/spring/graph.py     SPRING 问题 DAG 与动作匹配
+modules/planner/            policy.py、planner.py 与 executor.py
+modules/ours/policy.py      新算法实现入口，目前继承 Planner
 prompts/react/react.txt     ReAct 提示词
 prompts/planner/            planner.txt 与 executor.txt
 prompts/spring/             官方问题、手册、来源版本和许可
@@ -141,7 +145,9 @@ BALROG/                     上游环境、客户端、历史和评估实现
 outputs/results/            实验结果
 ```
 
-开发新算法时，主要修改 `agents/our_agent.py`，按需添加算法组件。实现 BALROG 接口：
+算法实现和专用组件放在 `modules/<方法>/`，跨方法共享的功能放在 `modules/common/`；依赖从接入层指向方法实现，再指向公共功能，方法实现不反向导入 `agents` 或 `scripts`。各方法的配置与提示词分别放在 `configs/<方法>.yaml` 和 `prompts/<方法>/`。
+
+开发新算法时，主要修改 `modules/ours/policy.py`，按需在同目录添加组件；`agents/our_agent.py` 仅作为注册接入入口。实现 BALROG 接口：
 
 - `reset()`：清理每回合状态。
 - `act(observation, prev_action=None)`：接收 BALROG 原始观测，返回 `LLMResponse`。

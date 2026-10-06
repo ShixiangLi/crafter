@@ -1,10 +1,11 @@
 import copy
 import json
-from pathlib import Path
 
 from balrog.agents.base import BaseAgent as BALROGAgent
 
-PROMPTS = Path(__file__).resolve().parent.parent / "prompts"
+from . import ROOT
+
+PROMPTS = ROOT / "prompts"
 
 
 class BaseAgent(BALROGAgent):

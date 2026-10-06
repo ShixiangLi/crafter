@@ -1,6 +1,6 @@
 from balrog.agents import AgentFactory as BALROGAgentFactory
 from balrog.agents.naive import NaiveAgent
-from modules.api_client import create_llm_client
+from modules.common.api_client import create_llm_client
 from balrog.prompt_builder import create_prompt_builder
 
 from . import AGENTS
